@@ -14,6 +14,8 @@ Install the project dependencies with `bun install --frozen-lockfile`. Run the C
 bun run src/main.ts check FILE
 ```
 
+Bun 1.4.0 or newer is required; `package.json` declares it in `engines`. On an older Bun the program prints `pgnvet: requires Bun >=1.4.0 (found 1.3.9)` to standard error and exits with code 2.
+
 ## Usage
 
 The help synopsis is:
