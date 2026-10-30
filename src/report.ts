@@ -27,7 +27,7 @@ export function formatProblemLine(path: string, problem: Replay["problems"][numb
 }
 
 /** Render check diagnostics in input-file order followed by the aggregate summary. */
-export function renderCheckReport(files: readonly FileReplay[]): string {
+export function renderCheckReport(files: readonly FileReplay[], only?: readonly string[]): string {
   const problemLines: string[] = [];
   let gameCount = 0;
   let gamesWithProblems = 0;
@@ -37,23 +37,33 @@ export function renderCheckReport(files: readonly FileReplay[]): string {
     for (const replay of file.replays) {
       gameCount += 1;
       moveCount += replay.plies;
-      if (replay.problems.length > 0) {
+      const shown = selectProblems(replay.problems, only);
+      if (shown.length > 0) {
         gamesWithProblems += 1;
-        for (const problem of replay.problems) {
+        for (const problem of shown) {
           problemLines.push(formatProblemLine(file.path, problem));
         }
       }
     }
   }
 
+  const scope = only === undefined ? "" : ` (only ${only.join(", ")})`;
   if (problemLines.length > 0) {
     problemLines.push(
-      `${problemLines.length} ${plural(problemLines.length, "problem", "problems")} in ${gamesWithProblems} of ${gameCount} ${plural(gameCount, "game", "games")}`,
+      `${problemLines.length} ${plural(problemLines.length, "problem", "problems")} in ${gamesWithProblems} of ${gameCount} ${plural(gameCount, "game", "games")}${scope}`,
     );
     return `${problemLines.join("\n")}\n`;
   }
 
-  return `ok, ${gameCount} ${plural(gameCount, "game", "games")}, ${moveCount} ${plural(moveCount, "move", "moves")}\n`;
+  return `ok, ${gameCount} ${plural(gameCount, "game", "games")}, ${moveCount} ${plural(moveCount, "move", "moves")}${scope}\n`;
+}
+
+/** The problems a check reports: all of them, or only those whose code is in `only`. */
+export function selectProblems(
+  problems: Replay["problems"],
+  only: readonly string[] | undefined,
+): Replay["problems"] {
+  return only === undefined ? problems : problems.filter((problem) => only.includes(problem.code));
 }
 
 /** Render the sorted UCI/SAN listing and its terminal state or move count. */
