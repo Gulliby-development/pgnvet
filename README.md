@@ -21,13 +21,13 @@ Bun 1.4.0 or newer is required; `package.json` declares it in `engines`. On an o
 The help synopsis is:
 
 ```
-usage: pgnvet check FILE...
+usage: pgnvet check [--only CODES] FILE...
        pgnvet fen [--game N] [--ply N] FILE
        pgnvet moves [FEN]
        pgnvet perft DEPTH [FEN]
 ```
 
-Use `check` to replay one or more PGN files. Use `fen` to print a game's final position, or select a game and ply with `--game` and `--ply`. Ply zero is the initial position. Use `moves` to list legal moves in UCI and SAN, and `perft` to count positions to a depth from 1 through 4. The standard starting position is used when a FEN is omitted. Pass `-` as a file to read standard input.
+Use `check` to replay one or more PGN files, and `check --only` to report only some problem codes. Use `fen` to print a game's final position, or select a game and ply with `--game` and `--ply`. Ply zero is the initial position. Use `moves` to list legal moves in UCI and SAN, and `perft` to count positions to a depth from 1 through 4. The standard starting position is used when a FEN is omitted. Pass `-` as a file to read standard input.
 
 The following `games.pgn` file demonstrates the input and diagnostic report:
 
@@ -83,6 +83,8 @@ games.pgn:31: PV002 game 6: unreadable move "xyz"
 games.pgn:35: PV010 game 7: game has no result marker
 9 problems in 6 of 7 games
 ```
+
+Add `--only CODES` to `check` to report only some problems. CODES is a comma-separated list of codes from PV001 through PV010, and the option may be repeated (`--only PV003,PV004` and `--only=PV003 --only PV004` are the same). Only the listed problems are printed, counted in the summary line and used for the exit code, and the summary line ends with the sorted, de-duplicated codes: `pgnvet check --only PV004,PV003 games.pgn` prints the PV003 line and the PV004 line of the report above and `2 problems in 2 of 7 games (only PV003, PV004)`. When none of the listed problems occurs, the line is `ok, 7 games, 27 moves (only PV008)` for `--only PV008` and the exit code is 0. A code outside PV001 to PV010, an empty code and a missing value are usage errors (exit 2), and `--only` belongs to `check` only.
 
 ## Rules
 

@@ -9,13 +9,13 @@ export class UsageError extends Error {
 
 export type ParsedArgs =
   | { command: "help" }
-  | { command: "check"; files: string[] }
+  | { command: "check"; files: string[]; only?: string[] }
   | { command: "fen"; file: string; game: number; ply: number | undefined }
   | { command: "moves"; fen: string | undefined }
   | { command: "perft"; depth: number; fen: string | undefined };
 
 const USAGE = [
-  "usage: pgnvet check FILE...",
+  "usage: pgnvet check [--only CODES] FILE...",
   "       pgnvet fen [--game N] [--ply N] FILE",
   "       pgnvet moves [FEN]",
   "       pgnvet perft DEPTH [FEN]",
@@ -38,6 +38,22 @@ function parseSelector(value: string, option: "--game" | "--ply"): number {
     throw new UsageError(`invalid ${option} ${show(value)}`);
   }
   return parsed;
+}
+
+const PROBLEM_CODE = /^PV(00[1-9]|010)$/;
+
+/** Read the comma-separated codes of --only: sorted, without duplicates. */
+function parseCodes(values: readonly string[]): string[] {
+  const codes = new Set<string>();
+  for (const value of values) {
+    for (const code of value.split(",")) {
+      if (!PROBLEM_CODE.test(code)) {
+        throw new UsageError(`invalid --only code ${show(code)}`);
+      }
+      codes.add(code);
+    }
+  }
+  return [...codes].sort();
 }
 
 function parseDepth(value: string): number {
@@ -71,10 +87,26 @@ export function parseArgs(args: string[]): ParsedArgs {
   const operands: string[] = [];
   let gameValue: string | undefined;
   let plyValue: string | undefined;
+  const onlyValues: string[] = [];
 
   for (let index = 1; index < args.length; index += 1) {
     const argument = args[index];
     if (argument === undefined) {
+      continue;
+    }
+
+    if (command === "check" && argument === "--only") {
+      const value = args[index + 1];
+      if (value === undefined) {
+        throw new UsageError("--only needs a value");
+      }
+      onlyValues.push(value);
+      index += 1;
+      continue;
+    }
+
+    if (command === "check" && argument.startsWith("--only=")) {
+      onlyValues.push(argument.slice("--only=".length));
       continue;
     }
 
@@ -110,6 +142,7 @@ export function parseArgs(args: string[]): ParsedArgs {
 
   const game = gameValue === undefined ? 1 : parseSelector(gameValue, "--game");
   const ply = plyValue === undefined ? undefined : parseSelector(plyValue, "--ply");
+  const only = onlyValues.length > 0 ? parseCodes(onlyValues) : undefined;
 
   if (command === "check") {
     if (operands.length === 0) {
@@ -118,7 +151,7 @@ export function parseArgs(args: string[]): ParsedArgs {
     if (operands.filter((operand) => operand === "-").length > 1) {
       throw new UsageError("standard input given twice");
     }
-    return { command, files: operands };
+    return only === undefined ? { command, files: operands } : { command, files: operands, only };
   }
 
   if (command === "fen") {

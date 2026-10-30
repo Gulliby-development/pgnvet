@@ -7,7 +7,7 @@ const readmePath = resolve(dirname(fileURLToPath(import.meta.url)), "../README.m
 const readme = readFileSync(readmePath, "utf8").replace(/\r\n/g, "\n");
 
 const usageBlock = [
-  "usage: pgnvet check FILE...",
+  "usage: pgnvet check [--only CODES] FILE...",
   "       pgnvet fen [--game N] [--ply N] FILE",
   "       pgnvet moves [FEN]",
   "       pgnvet perft DEPTH [FEN]",
