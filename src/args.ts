@@ -1,3 +1,4 @@
+import { isProblemCode, type ProblemCode } from "./problems";
 import { show } from "./text";
 
 export class UsageError extends Error {
@@ -9,13 +10,13 @@ export class UsageError extends Error {
 
 export type ParsedArgs =
   | { command: "help" }
-  | { command: "check"; files: string[] }
+  | { command: "check"; files: string[]; only?: readonly ProblemCode[] }
   | { command: "fen"; file: string; game: number; ply: number | undefined }
   | { command: "moves"; fen: string | undefined }
   | { command: "perft"; depth: number; fen: string | undefined };
 
 const USAGE = [
-  "usage: pgnvet check FILE...",
+  "usage: pgnvet check [--only CODES] FILE...",
   "       pgnvet fen [--game N] [--ply N] FILE",
   "       pgnvet moves [FEN]",
   "       pgnvet perft DEPTH [FEN]",
@@ -52,6 +53,24 @@ function parseDepth(value: string): number {
   return parsed;
 }
 
+/** Split one --only value into codes, rejecting anything outside PV001 through PV010. */
+function parseOnlyValue(value: string): ProblemCode[] {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    throw new UsageError("--only needs a value");
+  }
+
+  const codes: ProblemCode[] = [];
+  for (const part of trimmed.split(",")) {
+    const code = part.trim();
+    if (!isProblemCode(code)) {
+      throw new UsageError(`invalid --only code ${show(code)}`);
+    }
+    codes.push(code);
+  }
+  return codes;
+}
+
 /** Parse the command line, preserving the requested validation precedence. */
 export function parseArgs(args: string[]): ParsedArgs {
   if (args.length === 1 && args[0] === "--help") {
@@ -69,12 +88,27 @@ export function parseArgs(args: string[]): ParsedArgs {
 
   const command: Command = first;
   const operands: string[] = [];
+  const onlyCodes = new Set<ProblemCode>();
   let gameValue: string | undefined;
   let plyValue: string | undefined;
 
   for (let index = 1; index < args.length; index += 1) {
     const argument = args[index];
     if (argument === undefined) {
+      continue;
+    }
+
+    if (command === "check" && (argument === "--only" || argument.startsWith("--only="))) {
+      const value = argument === "--only" ? args[index + 1] : argument.slice("--only=".length);
+      if (value === undefined) {
+        throw new UsageError("--only needs a value");
+      }
+      for (const code of parseOnlyValue(value)) {
+        onlyCodes.add(code);
+      }
+      if (argument === "--only") {
+        index += 1;
+      }
       continue;
     }
 
@@ -118,7 +152,10 @@ export function parseArgs(args: string[]): ParsedArgs {
     if (operands.filter((operand) => operand === "-").length > 1) {
       throw new UsageError("standard input given twice");
     }
-    return { command, files: operands };
+    if (onlyCodes.size === 0) {
+      return { command, files: operands };
+    }
+    return { command, files: operands, only: [...onlyCodes].sort() };
   }
 
   if (command === "fen") {

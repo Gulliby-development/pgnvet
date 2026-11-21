@@ -88,7 +88,7 @@ describe("CLI", () => {
     expect(runWithFiles(["--help"])).toEqual({
       status: 0,
       stdout:
-        "usage: pgnvet check FILE...\n" +
+        "usage: pgnvet check [--only CODES] FILE...\n" +
         "       pgnvet fen [--game N] [--ply N] FILE\n" +
         "       pgnvet moves [FEN]\n" +
         "       pgnvet perft DEPTH [FEN]\n",

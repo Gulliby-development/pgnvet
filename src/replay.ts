@@ -3,21 +3,13 @@ import { formatFen, parseFen, standardPosition } from "./fen";
 import { inCheck, legalMoves } from "./movegen";
 import type { PgnGame } from "./pgn-games";
 import type { PgnFault, PgnResult, PgnToken } from "./pgn-lexer";
+import type { ProblemCode } from "./problems";
 import { findMoves, formatSan } from "./san";
 import { show } from "./text";
 import type { Position } from "./types";
 
-export type ReplayProblemCode =
-  | PgnFault["code"]
-  | "PV002"
-  | "PV003"
-  | "PV004"
-  | "PV005"
-  | "PV006"
-  | "PV007"
-  | "PV008"
-  | "PV009"
-  | "PV010";
+/** A diagnostic code, taken from the shared list in `problems.ts`. */
+export type ReplayProblemCode = ProblemCode;
 
 export interface ReplayProblem {
   readonly code: ReplayProblemCode;

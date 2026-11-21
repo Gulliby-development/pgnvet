@@ -21,13 +21,13 @@ Bun 1.4.0 or newer is required; `package.json` declares it in `engines`. On an o
 The help synopsis is:
 
 ```
-usage: pgnvet check FILE...
+usage: pgnvet check [--only CODES] FILE...
        pgnvet fen [--game N] [--ply N] FILE
        pgnvet moves [FEN]
        pgnvet perft DEPTH [FEN]
 ```
 
-Use `check` to replay one or more PGN files. Use `fen` to print a game's final position, or select a game and ply with `--game` and `--ply`. Ply zero is the initial position. Use `moves` to list legal moves in UCI and SAN, and `perft` to count positions to a depth from 1 through 4. The standard starting position is used when a FEN is omitted. Pass `-` as a file to read standard input.
+Use `check` to replay one or more PGN files. `--only CODES` restricts the diagnostics, the counted games, and the exit code to a comma-separated list of problem codes from PV001 to PV010; the option may be repeated, the lists add up, and `--only=CODES` works too. Use `fen` to print a game's final position, or select a game and ply with `--game` and `--ply`. Ply zero is the initial position. Use `moves` to list legal moves in UCI and SAN, and `perft` to count positions to a depth from 1 through 4. The standard starting position is used when a FEN is omitted. Pass `-` as a file to read standard input.
 
 The following `games.pgn` file demonstrates the input and diagnostic report:
 
@@ -83,6 +83,8 @@ games.pgn:31: PV002 game 6: unreadable move "xyz"
 games.pgn:35: PV010 game 7: game has no result marker
 9 problems in 6 of 7 games
 ```
+
+That report lists every problem in the file. `--only` picks one kind at a time: `pgnvet check --only PV003 games.pgn` prints the illegal moves alone and ends with `1 problem in 1 of 7 games (only PV003)`, and `pgnvet check --only PV008 games.pgn` prints `ok, 7 games, 27 moves (only PV008)` because no FEN tag in the file is invalid. Selected codes are written once at the end of the summary line, sorted, and an unknown code or a missing value exits with code 2.
 
 ## Rules
 
