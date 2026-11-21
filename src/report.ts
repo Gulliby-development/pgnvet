@@ -1,4 +1,5 @@
-import type { Replay } from "./replay";
+import type { ProblemCode } from "./problems";
+import type { Replay, ReplayProblem } from "./replay";
 import { plural } from "./text";
 
 export interface FileReplay {
@@ -26,8 +27,28 @@ export function formatProblemLine(path: string, problem: Replay["problems"][numb
   return `${displayPath(path)}:${problem.line}: ${problem.code} game ${problem.game}: ${problem.message}`;
 }
 
-/** Render check diagnostics in input-file order followed by the aggregate summary. */
-export function renderCheckReport(files: readonly FileReplay[]): string {
+/** Keep the problems whose code was requested, or every problem when no list is given. */
+export function selectProblems(
+  problems: readonly ReplayProblem[],
+  only: readonly ProblemCode[] | undefined,
+): ReplayProblem[] {
+  if (only === undefined) {
+    return [...problems];
+  }
+
+  const wanted = new Set<ProblemCode>(only);
+  return problems.filter((problem) => wanted.has(problem.code));
+}
+
+/**
+ * Render check diagnostics in input-file order followed by the aggregate summary.
+ * An `only` list restricts the diagnostics, the counted games, and the summary
+ * suffix to the listed codes; without it nothing changes.
+ */
+export function renderCheckReport(
+  files: readonly FileReplay[],
+  only?: readonly ProblemCode[],
+): string {
   const problemLines: string[] = [];
   let gameCount = 0;
   let gamesWithProblems = 0;
@@ -37,23 +58,27 @@ export function renderCheckReport(files: readonly FileReplay[]): string {
     for (const replay of file.replays) {
       gameCount += 1;
       moveCount += replay.plies;
-      if (replay.problems.length > 0) {
+      const problems = selectProblems(replay.problems, only);
+      if (problems.length > 0) {
         gamesWithProblems += 1;
-        for (const problem of replay.problems) {
+        for (const problem of problems) {
           problemLines.push(formatProblemLine(file.path, problem));
         }
       }
     }
   }
 
+  const filter =
+    only === undefined || only.length === 0 ? "" : ` (only ${[...only].sort().join(", ")})`;
+
   if (problemLines.length > 0) {
     problemLines.push(
-      `${problemLines.length} ${plural(problemLines.length, "problem", "problems")} in ${gamesWithProblems} of ${gameCount} ${plural(gameCount, "game", "games")}`,
+      `${problemLines.length} ${plural(problemLines.length, "problem", "problems")} in ${gamesWithProblems} of ${gameCount} ${plural(gameCount, "game", "games")}${filter}`,
     );
     return `${problemLines.join("\n")}\n`;
   }
 
-  return `ok, ${gameCount} ${plural(gameCount, "game", "games")}, ${moveCount} ${plural(moveCount, "move", "moves")}\n`;
+  return `ok, ${gameCount} ${plural(gameCount, "game", "games")}, ${moveCount} ${plural(moveCount, "move", "moves")}${filter}\n`;
 }
 
 /** Render the sorted UCI/SAN listing and its terminal state or move count. */

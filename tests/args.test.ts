@@ -18,7 +18,7 @@ describe("argument parsing", () => {
     expect(parseArgs(["--help"])).toEqual({ command: "help" });
     expect(helpText()).toBe(
       [
-        "usage: pgnvet check FILE...",
+        "usage: pgnvet check [--only CODES] FILE...",
         "       pgnvet fen [--game N] [--ply N] FILE",
         "       pgnvet moves [FEN]",
         "       pgnvet perft DEPTH [FEN]",

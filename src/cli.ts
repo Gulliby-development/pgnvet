@@ -4,6 +4,7 @@ import { FenError, parseFen, standardPosition } from "./fen";
 import { inCheck, legalMoves } from "./movegen";
 import { perft } from "./perft";
 import { parsePgnGames } from "./pgn-games";
+import type { ProblemCode } from "./problems";
 import { replay } from "./replay";
 import {
   displayPath,
@@ -14,6 +15,7 @@ import {
   renderCheckReport,
   renderMovesReport,
   renderPerftReport,
+  selectProblems,
 } from "./report";
 import { formatSan } from "./san";
 import type { Position } from "./types";
@@ -66,7 +68,11 @@ function invalidFen(io: Io, error: unknown): number {
   return writeUsageError(io, `invalid FEN: ${reason}`);
 }
 
-function runCheck(files: readonly string[], io: Io): number {
+function runCheck(
+  files: readonly string[],
+  only: readonly ProblemCode[] | undefined,
+  io: Io,
+): number {
   const loaded: LoadedFile[] = [];
   for (const path of files) {
     const text = readText(path, io);
@@ -78,9 +84,13 @@ function runCheck(files: readonly string[], io: Io): number {
     path,
     replays: parsePgnGames(text).map(replay),
   }));
-  const report = renderCheckReport(results);
+  const report = renderCheckReport(results, only);
   io.out(report);
-  return results.some((file) => file.replays.some((game) => game.problems.length > 0)) ? 1 : 0;
+  return results.some((file) =>
+    file.replays.some((game) => selectProblems(game.problems, only).length > 0),
+  )
+    ? 1
+    : 0;
 }
 
 function runFen(file: string, gameNumber: number, ply: number | undefined, io: Io): number {
@@ -200,7 +210,7 @@ export function run(args: string[], io: Io): number {
       io.out(`${helpText()}\n`);
       return 0;
     case "check":
-      return runCheck(parsed.files, io);
+      return runCheck(parsed.files, parsed.only, io);
     case "fen":
       return runFen(parsed.file, parsed.game, parsed.ply, io);
     case "moves":
